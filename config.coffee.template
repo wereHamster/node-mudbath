@@ -1,0 +1,19 @@
+
+module.exports =
+
+    # Authentication
+    # --------------
+    # Certain actions are protected. This includes creating and modifying
+    # projects. Looking at the builds is always allowed.
+
+    basicAuth:      [ 'username', 'password' ]
+
+
+    # Email notifications
+    # -------------------
+    # The domain for the from address, and the recipient that is used in
+    # addition to the committer of the last commit.
+
+    email:
+        domain:    'domain.tld'
+        repicient: 'recipient@domain.tld'

@@ -1,0 +1,16 @@
+
+.project
+
+  ul.builds
+    - each build in builds
+      li(class=build.status)
+
+        span.title= 'Build ' + build._id
+          img(src="/loading.gif", alt="loader")
+
+        .stats
+          time(class="timeago",datetime=build.iso8601())= build.iso8601()
+
+        != partial('commit', { commit: build.commit })
+
+        .output!= build.html()

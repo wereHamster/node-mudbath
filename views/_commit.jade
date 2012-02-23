@@ -1,0 +1,10 @@
+
+.commit
+  .subject= commit.message.split('\n')[0]
+
+  | Commit
+  a.id(href='https://github.com/wereHamster/encounter/commit/'+commit.id)= commit.id.slice(0, 7)
+  = ' by '
+  a.author(href='mailto:' + commit.author.email)= commit.author.name
+  | , authored
+  time.timeago(datetime=commit.timestamp)= commit.timestamp

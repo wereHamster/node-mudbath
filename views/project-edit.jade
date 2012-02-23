@@ -1,0 +1,16 @@
+
+.project
+
+  form(action='/'+project._id+'/edit', method='post')
+    .field
+      label name
+      .input: input(type='text', name='name', value=project._id)
+    .field
+      label source
+      .input: input(type='text', name='source', value=project.get('source'))
+    .field
+      label script
+      .input: textarea(name='script')= project.script
+
+    .submit
+      button.minibutton update

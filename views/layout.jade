@@ -1,0 +1,43 @@
+!!!
+html
+  head
+    title= title
+
+    link(rel='stylesheet', href='/style.css')
+
+    script(src='/jquery-1.6.2.min.js')
+    script(src='/jquery.timeago.js')
+
+    include typekit
+
+    script
+      $(document).ready(function() {
+        $("time.timeago").timeago();
+      });
+
+  body
+    #container
+      h1#title
+        span.title= title
+        span.subtitle= subtitle
+
+      #menu
+        ul
+          li: a(href='/') home
+
+      #content!= body
+
+      footer
+        p &copy; Tomas 'wereHamster' Carnecky
+
+        ul
+          li Powered by:
+
+          li
+            a(href="http://www.mongodb.org/") MongoDB
+            span |
+          li
+            a(href="http://nodejs.org/") Node.js
+            span |
+          li
+            a(href="http://expressjs.com/") Express

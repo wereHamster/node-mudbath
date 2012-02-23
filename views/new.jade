@@ -1,0 +1,14 @@
+
+form(action='/project',method='post')
+  .field
+    label name
+    .input: input(type='text', name='name')
+  .field
+    label source
+    .input: input(type='text', name='source')
+  .field
+    label script
+    .input: textarea(name='script')
+
+  .submit
+    button.minibutton create
