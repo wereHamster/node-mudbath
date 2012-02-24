@@ -46,7 +46,7 @@ class Builder extends mojo.Template
     # for the time being.
     reportBuildFailure: (build) ->
         committer = build.committerIdentity()
-        subject = "Failure: #{project._id} - #{build.ref}"
+        subject = "Failure: #{build.project} - #{build.ref}"
         body = build.output.map((x) -> x.text).join ''
         sendMail committer, subject, body
 

@@ -159,7 +159,7 @@ app.post '/:project/edit', requireAuth, (req, res) ->
     req.project.set 'source', req.param 'source'
     req.project.set 'script', req.param('script').crlf()
 
-    req.project.save -> res.redirect '/' + req.project.name
+    req.project.save -> res.redirect '/' + req.project._id
 
 app.get '/:project/*', branchParam, fetchBranchBuilds, (req, res) ->
     res.render 'branch', {

@@ -16,4 +16,4 @@ module.exports =
 
     email:
         domain:    'domain.tld'
-        repicient: 'recipient@domain.tld'
+        recipient: 'recipient@domain.tld'
