@@ -32,3 +32,7 @@ exports.html = (str) ->
             return ''
 
     return "<code><pre><span>#{result.join('')}</span></pre></code>"
+
+# Return the string as plain text, removing any color escape sequences.
+exports.plain = (str) ->
+    tokenize(str).map((v) -> if typeof v == 'string' then v else '').join ''
