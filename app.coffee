@@ -99,7 +99,9 @@ deleteRef = (repoName, ref) ->
     Project.findById repoName, (err, project) ->
         if project then project.deleteRefByName ref, ->
 
-triggerBuild = (repoName, pusher, ref, commit) ->
+triggerBuild = (repoName, pusher, ref, commit, sha) ->
+    commit ||= { id: sha, message: '', author: { email: '', name: '' }, timestamp: '' }
+
     Project.findById repoName, (err, project) ->
         return if err || !project
 
@@ -119,7 +121,7 @@ processHookPayload = (x) ->
     if x.after is nullSHA
         deleteRef x.repository.name, x.ref
     else if x.ref.match /^refs\/heads\//
-        triggerBuild x.repository.name, x.pusher, x.ref, x.commits.pop()
+        triggerBuild x.repository.name, x.pusher, x.ref, x.commits.pop(), x.after
 
 
 # Here be the routes
