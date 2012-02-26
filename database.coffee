@@ -41,6 +41,15 @@ ProjectSchema.methods =
     branch:  (n) -> @refs.filter((x) -> x.name is n)[0]
     deleteCache: -> wrench.rmdirSyncRecursive @cachePath(), true
 
+    # Delete a ref by its name. Is safe to call even if the ref doesn't exist.
+    # Also deletes all related builds.
+    deleteRefByName: (name, fn) ->
+        if ref = @branch name
+            Build.remove { project: @_id, ref: name }, =>
+                ref.remove(); @save fn
+        else
+            fn()
+
 mongoose.model('Project', ProjectSchema);
 Project = mongoose.model('Project');
 

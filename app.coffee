@@ -97,11 +97,7 @@ createProject = (x, fn) ->
 
 deleteRef = (repoName, ref) ->
     Project.findById repoName, (err, project) ->
-        return if err || !project
-
-        if branch = project.branch ref
-            Build.remove { project: repoName, ref: ref }, ->
-                branch.remove(); project.save ->
+        if project then project.deleteRefByName ref, ->
 
 triggerBuild = (repoName, pusher, ref, commit) ->
     Project.findById repoName, (err, project) ->
@@ -178,10 +174,9 @@ app.get '/:project/*', branchParam, fetchBranchBuilds, (req, res) ->
         project: req.project, builds: req.builds
     }
 
-app.delete '/:project/*', requireAuth, branchParam, (req, res) ->
-    Build.remove { project: req.project._id, ref: req.branch.name }, ->
-        req.branch.remove()
-        req.project.save -> res.redirect '/' + req.project._id
+app.delete '/:project/*', requireAuth, (req, res) ->
+    req.project.deleteRefByName req.params[0], ->
+        res.redirect '/' + req.project._id
 
 
 
