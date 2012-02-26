@@ -56,7 +56,8 @@ OutputSchema = new mongoose.Schema({
 
 BuildSchema = new mongoose.Schema({
     project: { type: String }, ref: { type: String }, commit: { type: {} },
-    output: { type: [OutputSchema] }, status: { type: String }
+    output: { type: [OutputSchema] }, status: { type: String },
+    pusher: { type: {} }
 })
 
 BuildSchema.methods =
@@ -65,8 +66,8 @@ BuildSchema.methods =
     html:      -> html @output.map((x) -> x.text).join('')
     deleteBuildArtifacts: ->
         wrench.rmdirSyncRecursive @buildPath(), true
-    committerIdentity: ->
-        "#{@commit.committer.name} <#{@commit.committer.email}>"
+    pusherIdentity: ->
+        "#{@pusher.name} <#{@pusher.email}>"
 
 mongoose.model('Build', BuildSchema);
 Build = mongoose.model('Build');

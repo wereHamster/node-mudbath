@@ -45,7 +45,7 @@ class Builder extends mojo.Template
     # Build failures are sent by email to the committer. Email is good enough
     # for the time being.
     reportBuildFailure: (build) ->
-        committer = build.committerIdentity()
+        committer = build.pusherIdentity()
         subject = "Failure: #{build.project} - #{build.ref}"
         body = build.output.map((x) -> x.text).join ''
         sendMail committer, subject, body

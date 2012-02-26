@@ -54,8 +54,7 @@ fetchProjects = (req, res, next) ->
         req.projects = projects; next()
 
 branchParam = (req, res, next) ->
-    regexp = new RegExp req.params[0]
-    if branch = req.project.refs.filter((b) -> b.name.match(regexp))[0]
+    if branch = req.project.branch req.params[0]
         req.branch = branch; next()
     else
         next new Error 'No such branch'
@@ -96,23 +95,35 @@ createProject = (x, fn) ->
     project = new Project { _id: x.name, source: x.source.trim(), script: x.script }
     project.save (err) -> if err then fn err else fn null, project
 
-triggerBuild = (payload) ->
-    Project.findById payload.repository.name, (err, project) ->
+deleteRef = (repoName, ref) ->
+    Project.findById repoName, (err, project) ->
         return if err || !project
 
-        ref = payload.ref; commit = payload.commits[0]; timestamp = new Date
         if branch = project.branch ref
-            branch.commit = commit
-            branch.timestamp = timestamp
+            Build.remove { project: repoName, ref: ref }, ->
+                branch.remove(); project.save ->
+
+triggerBuild = (repoName, pusher, ref, commit) ->
+    Project.findById repoName, (err, project) ->
+        return if err || !project
+
+        timestamp = new Date
+        if branch = project.branch ref
+            branch.commit = commit; branch.timestamp = timestamp
         else
             project.refs.push { name: ref, status: '', timestamp, commit }
 
         project.save ->
-            build = new Build({ project: project._id, ref, commit })
-            build.save ->
-                enqueue build
+            build = new Build({ project: project._id, ref, commit, pusher })
+            build.save -> enqueue build
 
 
+nullSHA = [1..40].map((x) -> '0').join ('')
+processHookPayload = (x) ->
+    if x.after is nullSHA
+        deleteRef x.repository.name, x.ref
+    else if x.ref.match /^refs\/heads\//
+        triggerBuild x.repository.name, x.pusher, x.ref, x.commits.pop()
 
 
 # Here be the routes
@@ -127,7 +138,7 @@ app.get '/', fetchProjects, (req, res) ->
 # This is the endpoint where GitHub sends the post-receive payload. We trigger
 # the build and reply with 200.
 app.post '/hook', (req, res) ->
-    triggerBuild JSON.parse req.body.payload; res.send 200
+    processHookPayload JSON.parse req.body.payload; res.send 200
 
 app.get '/new', (req, res) ->
     res.render 'new', { title: 'register new project', subtitle: '' }
