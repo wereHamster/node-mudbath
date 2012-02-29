@@ -227,15 +227,21 @@ span
     color: #46a546;
 
 .commit
+  position relative
+
   font-size 14px
   font-weight 100
 
-  margin 2px 0
+  margin 0
   padding 1px 5px
 
   border 1px solid #ccc
   border-radius 2px
   background white
+
+  .compare
+    position absolute
+    top 2px; right 5px
 
   .subject
     font-size 16px
@@ -257,6 +263,8 @@ span
   border-color darken(#f2dede, 20%)
 
 .output
+  margin-top 2px
+
   pre
     zero-box()
     padding: 10px;

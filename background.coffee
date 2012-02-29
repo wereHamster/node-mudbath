@@ -19,18 +19,17 @@ mojoConnection = new mojo.Connection db: 'mudbath'
 class Builder extends mojo.Template
 
     # Get both the build and project and then kick of the whole process. The
-    # project branch is marked as 'building'.
+    # build status is set to 'building'.
     perform: (id) ->
         Build.findById id, (err, build) =>
             Project.findById build.project, (err, project) =>
-                branch = project.branch build.ref
-                branch.status = build.status = 'building'
-                build.save => project.save => @prepareBuild project, build
+                build.status = 'building'
+                build.save => @prepareBuild project, build
 
 
     # This is a wrapper around spawn. It stores all output (stdout and stderr)
     # in the build object.
-    spawn: (project, build, cmd, args, opt, fn) ->
+    spawn: (build, cmd, args, opt, fn) ->
         proc = spawn cmd, args, opt
 
         output = (channel, data) ->
@@ -51,36 +50,32 @@ class Builder extends mojo.Template
         sendMail committer, subject, body
 
 
-    # When the build completes, store the branch status in the project. And if
-    # the build failed, report the failure to whoever wants to know.
-    didComplete: (project, build, code) ->
+    # When the build completes, update the build status. And if the build
+    # failed, report the failure to whoever wants to know.
+    didComplete: (build, code) ->
         build.deleteBuildArtifacts()
 
-        branch = project.branch build.ref
-        branch.status = build.status = code is 0 and 'success' or 'failure'
-        branch.commit = build.commit
-
-        build.save => project.save =>
-            @complete(); @reportBuildFailure build if code isnt 0
+        build.status = code is 0 and 'success' or 'failure'
+        build.save => @complete(); @reportBuildFailure build if code isnt 0
 
 
     # This steps prepares the build directory, copies the code into a new
     # directory and all that stuff.
     prepareBuild: (project, build) ->
-        args = [ __dirname, project._id, project.get('source'), build.id, build.commit.id ]
-        @spawn project, build, './build.sh', args, {}, (code) =>
+        args = [ __dirname, project._id, project.get('source'), build.id, build.headCommit().id ]
+        @spawn build, './build.sh', args, {}, (code) =>
             if code is 0
                 @runBuildScript project, build
             else
-                @didComplete project, build, code
+                @didComplete build, code
 
 
     # This runs the actual user-supplied script. In bash as the login shell.
     # So feel free to use all of the bash beauty you want.
     runBuildScript: (project, build) ->
         args = [ '-l', '-c', project.script ]; cwd = build.buildPath()
-        @spawn project, build, 'bash', args, { cwd }, (code) =>
-            @didComplete project, build, code
+        @spawn build, 'bash', args, { cwd }, (code) =>
+            @didComplete build, code
 
 
 # Start the background worker.

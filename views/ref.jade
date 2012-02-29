@@ -11,6 +11,6 @@
         .stats
           time(class="timeago",datetime=build.iso8601())= build.iso8601()
 
-        != partial('commit', { commit: build.commit })
+        != partial('commit', { build: build })
 
         .output!= build.html()

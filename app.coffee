@@ -4,9 +4,13 @@
 
 settings = require './config'
 
+
+
 # Trim removes leading and trailing whitespace, clrf replaces clrf with lf.
 String::trim = -> @replace /^\s+|\s+$/g, ''
 String::crlf = -> @replace /\r\n/g, '\n'
+
+
 
 # Database
 mongoose = require './database'
@@ -14,8 +18,10 @@ Project  = mongoose.model 'Project'
 Build    = mongoose.model 'Build'
 
 
+
 # Background worker
 { enqueue } = require './background'
+
 
 
 # Express setup
@@ -51,15 +57,27 @@ requireAuth = express.basicAuth.apply @, settings.basicAuth
 fetchProjects = (req, res, next) ->
     Project.find {}, (err, projects) ->
         return next err if err
-        req.projects = projects; next()
+        req.projects = projects
 
-branchParam = (req, res, next) ->
-    if branch = req.project.branch req.params[0]
-        req.branch = branch; next()
+        ids = projects.map (x) -> x.refs.map (x) -> x.build
+        ids = Array.prototype.concat.apply [], ids
+        Build.find { _id: { $in: ids } }, (err, builds) ->
+            return next err if err
+            req.builds = builds; next()
+
+refParam = (req, res, next) ->
+    if ref = req.project.findRef req.params[0]
+        req.ref = ref; next()
     else
-        next new Error 'No such branch'
+        next new Error "No such ref: #{req.params[0]}"
 
-fetchBranchBuilds = (req, res, next) ->
+fetchLatestBuilds = (req, res, next) ->
+    ids = req.project.refs.map (x) -> x.build
+    Build.find { _id: { $in: ids } }, (err, builds) ->
+        return next err if err
+        req.builds = builds; next()
+
+fetchRefBuilds = (req, res, next) ->
     query = { project: req.project._id, ref: req.params[0] }
     Build.find(query).sort('_id', -1).limit(5).exec (err, builds) ->
         return next err if err
@@ -77,12 +95,6 @@ app.param 'project', (req, res, next, id) ->
 
         req.project = project; next();
 
-app.param 'branch', (req, res, next, id) ->
-    if branch = req.project.refs.filter((b) -> b.name.match(new RegExp(id)))[0]
-        req.branch = branch; next()
-    else
-        next new Error 'Branch ' + id + ' not found'
-
 app.param 'build', (req, res, next, id) ->
     Build.findById id, (err, build) ->
         if (err || !build)
@@ -91,29 +103,32 @@ app.param 'build', (req, res, next, id) ->
         req.build = build; next();
 
 
+
+# Helpers
+# -------
+
 createProject = (x, fn) ->
     project = new Project { _id: x.name, source: x.source.trim(), script: x.script }
     project.save (err) -> if err then fn err else fn null, project
+
 
 deleteRef = (repoName, ref) ->
     Project.findById repoName, (err, project) ->
         if project then project.deleteRefByName ref, ->
 
-triggerBuild = (repoName, pusher, ref, commit, sha) ->
-    commit ||= { id: sha, message: '', author: { email: '', name: '' }, timestamp: '' }
 
+triggerBuild = (repoName, name, payload) ->
     Project.findById repoName, (err, project) ->
         return if err || !project
 
-        timestamp = new Date
-        if branch = project.branch ref
-            branch.commit = commit; branch.timestamp = timestamp
-        else
-            project.refs.push { name: ref, status: '', timestamp, commit }
+        build = new Build({ project: project._id, ref: name, payload })
+        build.save ->
+            if ref = project.findRef name
+                ref.build = build.id
+            else
+                project.refs.push { name, build: build.id }
 
-        project.save ->
-            build = new Build({ project: project._id, ref, commit, pusher })
-            build.save -> enqueue build
+            project.save -> enqueue build
 
 
 nullSHA = [1..40].map((x) -> '0').join ('')
@@ -121,7 +136,12 @@ processHookPayload = (x) ->
     if x.after is nullSHA
         deleteRef x.repository.name, x.ref
     else if x.ref.match /^refs\/heads\//
-        triggerBuild x.repository.name, x.pusher, x.ref, x.commits.pop(), x.after
+        triggerBuild x.repository.name, x.ref, x
+
+
+findBuild = (req) ->
+    (id) -> req.builds.filter((x) -> x.id.toString() is id.toString())[0]
+
 
 
 # Here be the routes
@@ -130,7 +150,7 @@ processHookPayload = (x) ->
 app.get '/', fetchProjects, (req, res) ->
     res.render 'index', {
         title: 'continuous integration', subtitle: '',
-        projects: req.projects, builds: [], displayProjectHeader: true
+        projects: req.projects, displayProjectHeader: true, build: findBuild(req)
     }
 
 # This is the endpoint where GitHub sends the post-receive payload. We trigger
@@ -138,17 +158,17 @@ app.get '/', fetchProjects, (req, res) ->
 app.post '/hook', (req, res) ->
     processHookPayload JSON.parse req.body.payload; res.send 200
 
-app.get '/new', (req, res) ->
+app.get '/new', requireAuth, (req, res) ->
     res.render 'new', { title: 'register new project', subtitle: '' }
 
 app.post '/project', requireAuth, (req, res) ->
     createProject req.body, (err, project) ->
         res.redirect '/' + req.body.name
 
-app.get '/:project', (req, res) ->
+app.get '/:project', fetchLatestBuilds, (req, res) ->
     res.render 'project', {
         title: "#{req.project._id}", project: req.project,
-        subtitle: '', displayProjectHeader: false
+        subtitle: '', displayProjectHeader: false, build: findBuild(req)
     }
 
 app.delete '/:project', requireAuth, (req, res) ->
@@ -161,7 +181,8 @@ app.delete '/:project', requireAuth, (req, res) ->
 app.get '/:project/edit', requireAuth, (req, res) ->
     res.render 'project-edit', {
         title: "#{req.project._id}", subtitle: "edit",
-        project: req.project
+        project: req.project, build: (id) ->
+            req.builds.filter((x) -> x.id.toString() is id.toString())[0]
     }
 
 app.post '/:project/edit', requireAuth, (req, res) ->
@@ -170,9 +191,9 @@ app.post '/:project/edit', requireAuth, (req, res) ->
 
     req.project.save -> res.redirect '/' + req.project._id
 
-app.get '/:project/*', branchParam, fetchBranchBuilds, (req, res) ->
-    res.render 'branch', {
-        title: "#{req.project._id}", subtitle: "#{req.branch.name}",
+app.get '/:project/*', refParam, fetchRefBuilds, (req, res) ->
+    res.render 'ref', {
+        title: "#{req.project._id}", subtitle: "#{req.ref.name}",
         project: req.project, builds: req.builds
     }
 

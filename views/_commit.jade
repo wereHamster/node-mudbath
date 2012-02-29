@@ -1,9 +1,11 @@
+- commit = build.headCommit()
 
 .commit
   .subject= commit.message.split('\n')[0]
+  a.compare(href=build.payload.compare) view all commits (#{build.numCommits()})
 
   | Commit
-  a.id(href='https://github.com/wereHamster/encounter/commit/'+commit.id)= commit.id.slice(0, 7)
+  a.id(href=commit.url)= commit.id.slice(0, 7)
   = ' by '
   a.author(href='mailto:' + commit.author.email)= commit.author.name
   | , authored

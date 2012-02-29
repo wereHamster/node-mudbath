@@ -7,12 +7,12 @@
         a.permalink(href='/'+project._id) permalink
 
   ul.refs
-    - each ref in project.refs.sort(function(x,y) { return y.timestamp.getTime() - x.timestamp.getTime() })
-      li(class=ref.status)
+    - each ref in project.sortedRefs()
+      li(class=build(ref.build).status)
         a.ref(href='/'+project._id+'/'+ref.name)= ref.name
           img(src='/loading.gif', alt='loader')
 
         .stats
           time.timeago(datetime=ref.iso8601())= ref.iso8601()
 
-        != partial('commit', { commit: ref.commit })
+        != partial('commit', { build: build(ref.build) })
