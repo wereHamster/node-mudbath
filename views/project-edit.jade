@@ -14,3 +14,9 @@
 
     .submit
       button.minibutton update
+
+  .danger
+    form(action='/'+project._id+'/delete', method='post')
+      label Danger Zone
+      .submit
+        button.minibutton delete project

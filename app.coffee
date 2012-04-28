@@ -171,7 +171,7 @@ app.get '/:project', fetchLatestBuilds, (req, res) ->
         subtitle: '', displayProjectHeader: false, build: findBuild(req)
     }
 
-app.delete '/:project', requireAuth, (req, res) ->
+app.post '/:project/delete', requireAuth, (req, res) ->
     req.project.deleteCache()
 
     Build.remove { project: req.project._id }, ->
