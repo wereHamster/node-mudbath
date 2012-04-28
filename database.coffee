@@ -35,8 +35,12 @@ RefSchema.methods =
 
 
 ProjectSchema = new mongoose.Schema({
-    _id: { type: String }, script: { type: String },
-    refs: { type: [ RefSchema ] }
+    _id:    { type: String }
+
+    source: { type: String, required: true }
+    script: { type: String, required: true }
+
+    refs:   { type: [ RefSchema ] }
 })
 
 ProjectSchema.methods =
@@ -57,6 +61,10 @@ ProjectSchema.methods =
                 ref.remove(); @save fn
         else
             fn()
+
+ProjectSchema.path('source').set (x) -> x.trim()
+ProjectSchema.path('script').set (x) -> x.crlf()
+
 
 mongoose.model('Project', ProjectSchema);
 Project = mongoose.model('Project');

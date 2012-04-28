@@ -108,7 +108,7 @@ app.param 'build', (req, res, next, id) ->
 # -------
 
 createProject = (x, fn) ->
-    project = new Project { _id: x.name, source: x.source.trim(), script: x.script }
+    project = new Project { _id: x.name, source: x.source, script: x.script }
     project.save (err) -> if err then fn err else fn null, project
 
 
@@ -187,7 +187,7 @@ app.get '/:project/edit', requireAuth, (req, res) ->
 
 app.post '/:project/edit', requireAuth, (req, res) ->
     req.project.set 'source', req.param 'source'
-    req.project.set 'script', req.param('script').crlf()
+    req.project.set 'script', req.param 'script'
 
     req.project.save -> res.redirect '/' + req.project._id
 
