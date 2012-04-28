@@ -48,6 +48,9 @@ app.configure 'development', ->
     app.use express.errorHandler { dumpExceptions: true, showStack: true }
 
 
+renderError = (req, res, code) ->
+    res.render 'error', { title: 'error', subtitle: '', code }
+
 
 # Middleware
 # ----------
@@ -56,31 +59,31 @@ requireAuth = express.basicAuth.apply @, settings.basicAuth
 
 fetchProjects = (req, res, next) ->
     Project.find {}, (err, projects) ->
-        return next err if err
+        return renderError req, res, 500 if err
         req.projects = projects
 
         ids = projects.map (x) -> x.refs.map (x) -> x.build
         ids = Array.prototype.concat.apply [], ids
         Build.find { _id: { $in: ids } }, (err, builds) ->
-            return next err if err
+            return renderError req, res, 500 if err
             req.builds = builds; next()
 
 refParam = (req, res, next) ->
     if ref = req.project.findRef req.params[0]
         req.ref = ref; next()
     else
-        next new Error "No such ref: #{req.params[0]}"
+        return renderError req, res, 404
 
 fetchLatestBuilds = (req, res, next) ->
     ids = req.project.refs.map (x) -> x.build
     Build.find { _id: { $in: ids } }, (err, builds) ->
-        return next err if err
+        return renderError req, res, 500 if err
         req.builds = builds; next()
 
 fetchRefBuilds = (req, res, next) ->
     query = { project: req.project._id, ref: req.params[0] }
     Build.find(query).sort('_id', -1).limit(5).exec (err, builds) ->
-        return next err if err
+        return renderError req, res, 404 if err
         req.builds = builds; next()
 
 
@@ -91,14 +94,14 @@ fetchRefBuilds = (req, res, next) ->
 app.param 'project', (req, res, next, id) ->
     Project.findById id, (err, project) ->
         if (err || !project)
-            return next(err || new Error('Project ' + id + ' not found'))
+            return renderError req, res, 404
 
         req.project = project; next();
 
 app.param 'build', (req, res, next, id) ->
     Build.findById id, (err, build) ->
         if (err || !build)
-            return next(err || new Error('Build ' + id + ' not found'))
+            return renderError req, res, 404
 
         req.build = build; next();
 
@@ -163,7 +166,10 @@ app.get '/new', requireAuth, (req, res) ->
 
 app.post '/project', requireAuth, (req, res) ->
     createProject req.body, (err, project) ->
-        res.redirect '/' + req.body.name
+        if err
+            res.redirect '/new'
+        else
+            res.redirect '/' + req.body.name
 
 app.get '/:project', fetchLatestBuilds, (req, res) ->
     res.render 'project', {
