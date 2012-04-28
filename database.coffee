@@ -91,7 +91,16 @@ BuildSchema.methods =
     iso8601:   -> iso8601 new Date @_id.generationTime * 1000
     html:      -> html @output.map((x) -> x.text).join('')
     deleteBuildArtifacts: -> wrench.rmdirSyncRecursive @buildPath(), true
-    pusherIdentity: -> "#{@payload.pusher.name} <#{@payload.pusher.email}>"
+
+    pusherIdentity: ->
+        if @payload.pusher and @payload.pusher.name isnt 'none'
+            "#{@payload.pusher.name} <#{@payload.pusher.email}>"
+        else
+            null
+
+    headCommitterIdentity: ->
+        "#{@headCommit().committer.name} <#{@headCommit().committer.email}>"
+
     headCommit: -> @payload.head_commit
     numCommits: -> @payload.commits.length
 
