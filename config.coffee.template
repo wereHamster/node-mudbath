@@ -17,3 +17,11 @@ module.exports =
     email:
         domain:    'domain.tld'
         recipient: 'recipient@domain.tld'
+
+
+    # GitHub Status
+    # -------------
+    # A GitHub API token that has 'repo:status' scope. If you leave this
+    # undefined, no attempt will be made to update the status on github.
+
+    githubToken:   'deadbeef'

@@ -1,5 +1,6 @@
-{ spawn } = require 'child_process'
-{ sendMail } = require './notifications'
+{ spawn }        = require 'child_process'
+
+{ sendMail, updateGithubStatus } = require './notifications'
 
 # Builds are run in the background. We use mojo, the mongodb job queue to
 # manage the background jobs.
@@ -24,6 +25,7 @@ class Builder extends mojo.Template
         Build.findById id, (err, build) =>
             Project.findById build.project, (err, project) =>
                 build.status = 'building'
+                @updateCommitStatus build
                 build.save => @prepareBuild project, build
 
 
@@ -50,13 +52,35 @@ class Builder extends mojo.Template
         sendMail committer, subject, body
 
 
+    updateCommitStatus: (build) ->
+        repo = build.payload.repository.url.replace /https:..github.com./, ''
+        sha  = build.headCommit().id
+
+        if build.status == 'building'
+            state = 'pending'
+        else
+            state = build.status
+
+        updateGithubStatus repo, sha, state, ->
+
+
+
     # When the build completes, update the build status. And if the build
     # failed, report the failure to whoever wants to know.
     didComplete: (build, code) ->
         build.deleteBuildArtifacts()
 
         build.status = code is 0 and 'success' or 'failure'
-        build.save => @complete(); @reportBuildFailure build if code isnt 0
+        build.save =>
+            # Notify mojo that we're done with the job.
+            @complete()
+
+            # If the build failed, send an email to the relevant people.
+            if build.status == 'failure'
+                @reportBuildFailure build
+
+            # Update the commit status on github.
+            @updateCommitStatus build
 
 
     # This steps prepares the build directory, copies the code into a new
