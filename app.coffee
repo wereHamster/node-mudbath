@@ -7,7 +7,6 @@ settings = require './config'
 
 
 # Trim removes leading and trailing whitespace, clrf replaces clrf with lf.
-String::trim = -> @replace /^\s+|\s+$/g, ''
 String::crlf = -> @replace /\r\n/g, '\n'
 
 
