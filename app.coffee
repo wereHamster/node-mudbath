@@ -133,7 +133,7 @@ triggerBuild = (repoName, name, payload) ->
             project.save -> enqueue build
 
 
-nullSHA = [1..40].map((x) -> '0').join ('')
+nullSHA = new Array(40).join '0'
 processHookPayload = (x) ->
     if x.after is nullSHA
         deleteRef x.repository.name, x.ref
