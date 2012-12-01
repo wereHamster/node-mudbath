@@ -45,3 +45,10 @@ exports.updateGithubStatus = (repo, sha, state, fn) ->
 
     # Ignore response. Eventually we may want to check whether the request
     # was sent successfully and display some indication in our UI.
+
+
+{ Campfire } = require "campfire"
+exports.notifyCampfire = (message) ->
+    if conf = settings.campfire
+        campfire = new Campfire { ssl: true, token: conf.token, account: conf.account }
+        campfire.join conf.room, (err, room) -> room.speak message, (err, response) ->

@@ -25,3 +25,12 @@ module.exports =
     # undefined, no attempt will be made to update the status on github.
 
     githubToken:   'deadbeef'
+
+
+    # Campfire integration
+    # --------------------
+
+    campfire:
+        account: 'account-name' # The subdomain from xxxx.campfirenow.com.
+        token:   'deadbeef'     # You can find it under 'My info'.
+        room:    42             # The room ID (you see it in the url).

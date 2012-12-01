@@ -1,6 +1,6 @@
 { spawn }        = require 'child_process'
 
-{ sendMail, updateGithubStatus } = require './notifications'
+{ sendMail, updateGithubStatus, notifyCampfire } = require './notifications'
 
 # Builds are run in the background. We use mojo, the mongodb job queue to
 # manage the background jobs.
@@ -26,6 +26,7 @@ class Builder extends mojo.Template
             Project.findById build.project, (err, project) =>
                 build.status = 'building'
                 @updateCommitStatus build
+                notifyCampfire "Building #{build.project} - #{build.ref}"
                 build.save => @prepareBuild project, build
 
 
@@ -50,6 +51,7 @@ class Builder extends mojo.Template
         subject = "Failure: #{build.project} - #{build.ref}"
         body = build.output.map((x) -> x.text).join ''
         sendMail committer, subject, body
+        notifyCampfire subject
 
 
     updateCommitStatus: (build) ->
@@ -78,6 +80,8 @@ class Builder extends mojo.Template
             # If the build failed, send an email to the relevant people.
             if build.status == 'failure'
                 @reportBuildFailure build
+            else
+                notifyCampfire "Build successful #{build.project} - {build.ref}"
 
             # Update the commit status on github.
             @updateCommitStatus build
